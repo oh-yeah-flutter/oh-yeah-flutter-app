@@ -1173,59 +1173,70 @@ class NewsPage extends StatelessWidget {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setString('lastReadNews', DateTime.now().toIso8601String());
                 },
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
+                      // 🖼 サムネイル
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: (imageUrl != null && imageUrl.isNotEmpty)
+                            ? CachedNetworkImage(
+                                imageUrl: imageUrl,
+                                width: 90,
+                                height: 90,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => Container(
+                                  color: Colors.black12,
+                                ),
+                                errorWidget: (context, url, error) => const Icon(Icons.error),
+                              )
+                            : Container(
+                                width: 90,
+                                height: 90,
+                                color: Colors.black12,
+                                child: const Icon(Icons.image, color: Colors.grey),
+                              ),
+                      ),
 
-                      /// 画像
-                      if (imageUrl != null && imageUrl.isNotEmpty)
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                          child: CachedNetworkImage(
-                            imageUrl: imageUrl,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Container(
-                              color: Colors.black12,
-                            ),
-                            errorWidget: (context, url, error) => const Icon(Icons.error),
-                          ),
-                        ),
+                      const SizedBox(width: 12),
 
-                      /// テキスト
-                      Padding(
-                        padding: const EdgeInsets.all(14),
+                      // 📝 テキスト
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-
-                            /// 日付
+                            // 日付
                             Text(
                               dateStr,
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
                               ),
                             ),
 
                             const SizedBox(height: 6),
 
-                            /// タイトル
+                            // タイトル
                             Text(
                               title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 20,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF3E2723),
                               ),
                             ),
                           ],
