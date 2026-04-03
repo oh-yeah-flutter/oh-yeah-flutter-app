@@ -5,12 +5,19 @@ class DrinkPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFFF5E9DA),
-      child: const Center(
-        child: Text(
-          "Drink Menu",
-          style: TextStyle(fontSize: 22),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("DRINK"),
+        backgroundColor: const Color(0xFF7b5a36),
+      ),
+
+      body: Container(
+        color: const Color(0xFFF5E9DA),
+        child: const Center(
+          child: Text(
+            "Drink Menu",
+            style: TextStyle(fontSize: 22),
+          ),
         ),
       ),
     );

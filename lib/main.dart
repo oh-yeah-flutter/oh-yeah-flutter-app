@@ -5,9 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'screens/news_detail_page.dart';
 import 'splash_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -19,14 +19,36 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-    final newsId = message.data['newsId'];
+  // 🔥 通知許可（iOS必須）
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
 
+  // 🔥 トークン取得
+  final token = await FirebaseMessaging.instance.getToken();
+  print("🔥 FCM TOKEN: $token");
+
+  // 🔥 トピック購読
+  await FirebaseMessaging.instance.subscribeToTopic("all");
+  print("🔥 topic登録完了");
+
+  // 🔥 通知受信（フォアグラウンド）
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    print("🔥 通知きたぞ");
+    print("title: ${message.notification?.title}");
+    print("body: ${message.notification?.body}");
+    print("data: ${message.data}");
+  });
+
+  // 🔥 通知タップで起動
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    print("🔥 通知タップで起動");
+    final newsId = message.data['newsId'];
     if (newsId != null) {
       navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          builder: (_) => NewsDetailPageById(newsId: newsId),
-        ),
+        MaterialPageRoute(builder: (_) => NewsDetailPageById(newsId: newsId)),
       );
     }
   });
@@ -42,6 +64,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        scaffoldBackgroundColor: const Color(0xFFF5EFE6),
+      ),
       home: const SplashScreen(),
       routes: {
         '/home': (context) => MainNavigationScreen(
@@ -78,17 +103,17 @@ class _MainNavigationScreenState
   int _selectedIndex = 0;
 
   List<Widget> _getPages() {
-    return [
-      HomePage(
-        onMenuTap: () => setState(() => _selectedIndex = 1),
-        onMapTap: _openMap,
-      ),
-      MenuPage(onBack: () => setState(() => _selectedIndex = 0)),
-      NewsPage(onBack: () => setState(() => _selectedIndex = 0)),
-      const SizedBox.shrink(),
-      const SizedBox.shrink(),
-    ];
-  }
+  return [
+    HomePage(
+      onMenuTap: () => setState(() => _selectedIndex = 1),
+      onMapTap: _openMap,
+    ),
+    MenuPage(onBack: () => setState(() => _selectedIndex = 0)),
+    NewsPage(onBack: () => setState(() => _selectedIndex = 0)),
+    const SizedBox.shrink(),
+    const SizedBox.shrink(),
+  ];
+}
 
   void _onItemTapped(int index) async {
     if (index == 2) {
@@ -128,9 +153,6 @@ class _MainNavigationScreenState
 
   @override
   Widget build(BuildContext context) {
-    int displayIndex =
-        (_selectedIndex == 2) ? 1 : 0;
-
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
@@ -143,7 +165,7 @@ class _MainNavigationScreenState
         selectedItemColor: Colors.white,
         unselectedItemColor:
             Colors.grey[400],
-        currentIndex: displayIndex,
+        currentIndex: _selectedIndex == 2 ? 1 : 0,
         onTap: _onItemTapped,
         items: [
           BottomNavigationBarItem(
@@ -199,7 +221,15 @@ class _HomePageState extends State<HomePage> {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
 
     // 通知許可🔥
-    await messaging.requestPermission();
+    await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    // 🔥 トピック購読
+    await messaging.subscribeToTopic("all");
+    print("🔥 topic登録完了");
   }
 
   @override
@@ -1077,24 +1107,21 @@ class NewsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-
+    print("🔥 MAIN NEWS PAGE ACTIVE");
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color(0xFF3E2723),
         centerTitle: true,
-        backgroundColor:
-            const Color(0xFF3E2723),
         leading: IconButton(
-            icon: const Icon(
-                Icons.arrow_back,
-                color: Colors.white),
-            onPressed: onBack),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: onBack,
+        ),
         title: const Text(
-          'NEWS',
-          style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+          "NEWS",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
+      backgroundColor: const Color(0xFFF5EFE6),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('news')
@@ -1102,231 +1129,110 @@ class NewsPage extends StatelessWidget {
             .orderBy('date', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          print("ConnectionState: ${snapshot.connectionState}");
-          print("HasData: ${snapshot.hasData}");
-          print("HasError: ${snapshot.hasError}");
-
           if (snapshot.hasError) {
-            return Center(
-              child: Text("ERROR: ${snapshot.error}"),
-            );
+            return Center(child: Text("ERROR: ${snapshot.error}"));
           }
+
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
           final docs = snapshot.data!.docs;
 
-          final filteredDocs = docs.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final Timestamp? ts = data['date'];
-            final DateTime date = ts?.toDate() ?? DateTime.now();
-
-            print("NEWS DATE: $date");
-            print("NOW: $now");
-            return date.isBefore(now);
-          }).toList();
-
-          print("Docs length: ${filteredDocs.length}");
-          if (filteredDocs.isEmpty) {
-            return const Center(child: Text('お知らせはありません'));
+          if (docs.isEmpty) {
+            return const Center(child: Text("ニュースがありません"));
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: filteredDocs.length,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            itemCount: docs.length,
             itemBuilder: (context, index) {
-              final data = filteredDocs[index].data() as Map<String, dynamic>;
-              final Timestamp? ts = data['publishAt'] ?? data['date'];
-              final DateTime date = ts!.toDate();
+              final data = docs[index].data() as Map<String, dynamic>;
+              final newsId = docs[index].id;
 
-              final now = DateTime.now();
-              if (date.difference(now).inSeconds > 0) {
-                return const SizedBox();
-              }
+              final title = data['title'] ?? '';
+              final String? imageUrl = data['imageUrl'];
+              final Timestamp? ts = data['date'];
+              final date = ts?.toDate() ?? DateTime.now();
 
-              final String title = data['title'] ?? 'No Title';
-              final String content = (data['body'] ?? '').replaceAll('\\n', '\n');
-              final String? imageUrl =
-                  data.containsKey('imageUrl') ? data['imageUrl'] as String? : null;
-              final String dateStr = DateFormat('yyyy.MM.dd').format(date);
-
-              print("==== DEBUG ====");
-              print("title: $title");
-              print("date: $date");
-              print("now: ${DateTime.now()}");
-              print("isBefore: ${date.isBefore(DateTime.now())}");
-
-              return GestureDetector(
-                onTap: () async {
+              return InkWell(
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => NewsDetailPage(
-                        title: title,
-                        content: content,
-                        date: date,
-                        imageUrl: imageUrl,
-                      ),
+                      builder: (_) =>
+                          NewsDetailPageById(newsId: newsId),
                     ),
                   );
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('lastReadNews', DateTime.now().toIso8601String());
                 },
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-
-                      /// 画像
-                      if (imageUrl != null && imageUrl.isNotEmpty)
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
                         ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                          child: CachedNetworkImage(
-                            imageUrl: imageUrl,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Container(
-                              color: Colors.black12,
-                            ),
-                            errorWidget: (context, url, error) => const Icon(Icons.error),
+                          borderRadius: BorderRadius.circular(12),
+                          child: imageUrl != null && imageUrl.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: imageUrl,
+                                  width: 70,
+                                  height: 70,
+                                  fit: BoxFit.cover,
+                                )
+                              : Container(
+                                  width: 70,
+                                  height: 70,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.image),
+                                ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}",
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-
-                      /// テキスト
-                      Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-
-                            /// 日付
-                            Text(
-                              dateStr,
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-
-                            const SizedBox(height: 6),
-
-                            /// タイトル
-                            Text(
-                              title,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF3E2723),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
             },
           );
         },
-      ),
-    );
-  }
-}
-
-class NewsDetailPage extends StatelessWidget {
-  final String title;
-  final String content;
-  final DateTime date;
-  final String? imageUrl;
-
-  const NewsDetailPage({
-    super.key,
-    required this.title,
-    required this.content,
-    required this.date,
-    this.imageUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final String dateStr = DateFormat('yyyy.MM.dd').format(date);
-
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        backgroundColor: const Color(0xFF3E2723),
-        title: const Text(
-          'NEWS DETAIL',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (imageUrl != null && imageUrl!.isNotEmpty)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl!,
-                  width: double.infinity,
-                  fit: BoxFit.fitWidth,
-                  placeholder: (context, url) => Container(
-                    color: Colors.black12,
-                  ),
-                  errorWidget: (context, url, error) => const Icon(Icons.error),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    dateStr,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF3E2723),
-                    ),
-                  ),
-                  const Divider(height: 40, thickness: 1),
-                  Text(
-                    content,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      height: 1.6,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          ],
-        ),
       ),
     );
   }

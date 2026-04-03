@@ -23,6 +23,82 @@
           "other_platform_oauth_client": []
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:642657130095:android:55bb7d29eb4cd6561c9f9a",
+        "android_client_info": {
+          "package_name": "com.example.oh_yeah_admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYxooaCGo3WC0Xq96fRcgIw34A9ewewCA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:642657130095:android:20f0b5425e69aa7f1c9f9a",
+        "android_client_info": {
+          "package_name": "com.example.oh_yeah_admin2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYxooaCGo3WC0Xq96fRcgIw34A9ewewCA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:642657130095:android:d998bfeb81109a9f1c9f9a",
+        "android_client_info": {
+          "package_name": "com.example.oh_yeah_import_tool"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYxooaCGo3WC0Xq96fRcgIw34A9ewewCA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:642657130095:android:d025f5ae8444aa4b1c9f9a",
+        "android_client_info": {
+          "package_name": "com.ryozo.ohyeah"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYxooaCGo3WC0Xq96fRcgIw34A9ewewCA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
     }
   ],
   "configuration_version": "1"
