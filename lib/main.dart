@@ -56,39 +56,22 @@ void main() async {
   // 🔥 アプリ終了状態からの通知起動
   RemoteMessage? initialMessage =
       await FirebaseMessaging.instance.getInitialMessage();
-
-  if (initialMessage != null) {
-    final newsId = initialMessage.data['newsId'];
-
-    if (newsId != null) {
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          builder: (_) => NewsDetailPageById(newsId: newsId),
-        ),
-      );
-    }
-  }
-
-  runApp(const MyApp());
+  runApp(MyApp(initialMessage: initialMessage));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final RemoteMessage? initialMessage;
+
+  const MyApp({super.key, this.initialMessage});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFE0D3C2),
-      ),
-      home: const SplashScreen(),
+      home: SplashScreen(initialMessage: initialMessage),
       routes: {
-        '/home': (context) => MainNavigationScreen(
-              onMenuTap: () {},
-              onMapTap: () {},
-            ),
+        '/home': (context) => const MainNavigationScreen(),
       },
     );
   }
@@ -117,6 +100,20 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState
     extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
+  bool _hasUnread = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadUnread();
+  }
+
+  Future<void> loadUnread() async {
+    final result = await hasUnreadNews();
+    setState(() {
+      _hasUnread = result;
+    });
+  }
 
   List<Widget> _getPages() {
   return [
@@ -131,6 +128,31 @@ class _MainNavigationScreenState
   ];
 }
 
+  Future<bool> hasUnreadNews() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastRead = prefs.getString('lastReadNews');
+
+    if (lastRead == null) return true;
+
+    final lastReadDate = DateTime.parse(lastRead);
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('news')
+        .where('isPublished', isEqualTo: true)
+        .get();
+
+    for (var doc in snapshot.docs) {
+      final ts = doc['date'] as Timestamp;
+      final newsDate = ts.toDate();
+
+      if (newsDate.isAfter(lastReadDate)) {
+        return true; // 未読あり
+      }
+    }
+
+    return false;
+  }
+
   void _onItemTapped(int index) async {
     if (index == 2) {
       _launchUrl('https://www.facebook.com/ohyeahmihama');
@@ -143,6 +165,7 @@ class _MainNavigationScreenState
           'lastReadNews',
           DateTime.now().toIso8601String(),
         );
+        await loadUnread();
       }
       setState(() {
         if (index == 1) {
@@ -189,7 +212,24 @@ class _MainNavigationScreenState
             label: 'HOME',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.newspaper),
+            icon: Stack(
+              children: [
+                const Icon(Icons.newspaper),
+                if (_hasUnread)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             label: 'NEWS',
           ),
           BottomNavigationBarItem(
