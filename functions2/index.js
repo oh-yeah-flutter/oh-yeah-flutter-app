@@ -10,6 +10,7 @@ exports.sendNewsNotification = functions.firestore
     const data = snap.data();
 
     console.log("🔥 Firestore trigger OK");
+    console.log("🔥 送信newsId:", context.params.newsId);
 
     const title = data.title || "新着ニュース";
     const body = data.body || "";
@@ -18,6 +19,9 @@ exports.sendNewsNotification = functions.firestore
       notification: {
         title: title,
         body: body,
+      },
+      data: {
+        newsId: String(context.params.newsId),
       },
       topic: "all",
     };

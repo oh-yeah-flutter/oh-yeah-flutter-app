@@ -53,6 +53,22 @@ void main() async {
     }
   });
 
+  // 🔥 アプリ終了状態からの通知起動
+  RemoteMessage? initialMessage =
+      await FirebaseMessaging.instance.getInitialMessage();
+
+  if (initialMessage != null) {
+    final newsId = initialMessage.data['newsId'];
+
+    if (newsId != null) {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (_) => NewsDetailPageById(newsId: newsId),
+        ),
+      );
+    }
+  }
+
   runApp(const MyApp());
 }
 
@@ -65,7 +81,7 @@ class MyApp extends StatelessWidget {
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF5EFE6),
+        scaffoldBackgroundColor: const Color(0xFFE0D3C2),
       ),
       home: const SplashScreen(),
       routes: {
@@ -244,9 +260,15 @@ class _HomePageState extends State<HomePage> {
           padding:
               const EdgeInsets.only(
                   top: 40),
-          child: Image.asset(
-            'assets/images/logo.png',
-            fit: BoxFit.contain,
+          child: ColorFiltered(
+            colorFilter: ColorFilter.mode(
+              Colors.black.withValues(alpha: 0.2),
+              BlendMode.darken,
+            ),
+            child: Image.asset(
+              'assets/images/logo.png',
+              fit: BoxFit.contain,
+            ),
           ),
         ),
         Expanded(
@@ -451,8 +473,13 @@ class NewsDetailPageById extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print("🔥 受信newsId: $newsId");
+
     return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('news').doc(newsId).get(),
+      future: FirebaseFirestore.instance
+          .collection('news')
+          .doc(newsId)
+          .get(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -1121,7 +1148,7 @@ class NewsPage extends StatelessWidget {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
-      backgroundColor: const Color(0xFFF5EFE6),
+      backgroundColor: const Color(0xFFE0D3C2),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('news')
